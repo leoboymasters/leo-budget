@@ -176,7 +176,7 @@ if not df.empty:
         st.markdown("""
             <div class="metric-card">
                 <div class="metric-label">Total Balance</div>
-                <div class="metric-value">$%.2f</div>
+                <div class="metric-value">₱%.2f</div>
             </div>
         """ % balance, unsafe_allow_html=True)
         
@@ -184,7 +184,7 @@ if not df.empty:
         st.markdown("""
             <div class="metric-card">
                 <div class="metric-label">Total Income</div>
-                <div class="metric-value income">$%.2f</div>
+                <div class="metric-value income">₱%.2f</div>
             </div>
         """ % total_income, unsafe_allow_html=True)
         
@@ -192,7 +192,7 @@ if not df.empty:
         st.markdown("""
             <div class="metric-card">
                 <div class="metric-label">Total Expenses</div>
-                <div class="metric-value expense">$%.2f</div>
+                <div class="metric-value expense">₱%.2f</div>
             </div>
         """ % total_expenses, unsafe_allow_html=True)
 
