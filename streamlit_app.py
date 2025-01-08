@@ -8,7 +8,7 @@ import traceback
 
 # Page configuration
 st.set_page_config(
-    page_title="Budget Pro",
+    page_title="Budget Tracker",
     layout="wide",
     initial_sidebar_state="expanded"
 )
