@@ -13,6 +13,81 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Custom CSS (keeping the existing styles)
+st.markdown("""
+<style>
+    .main {
+        padding: 0rem 1rem;
+    }
+    .stButton > button {
+        width: 100%;
+        border-radius: 8px;
+        height: 3rem;
+        background-color: #3b82f6;
+        color: white;
+        font-weight: 500;
+    }
+    div[data-testid="stForm"] {
+        border: none;
+        padding: 0;
+    }
+    div[data-testid="stFormSubmitButton"] > button {
+        background-color: #3b82f6;
+        color: white;
+    }
+    .metric-card {
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    .metric-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+    }
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .income {
+        color: #10b981;
+    }
+    .expense {
+        color: #ef4444;
+    }
+    .stTabs {
+        background-color: white;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+    }
+    .stDataFrame {
+        background-color: white;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Initialize Google Sheets connection (keeping existing function)
+@st.cache_resource
+def init_google_sheets():
+    try:
+        scope = ['https://spreadsheets.google.com/feeds',
+                'https://www.googleapis.com/auth/drive']
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+            st.secrets["gcp_service_account"], 
+            scope
+        )
+        return gspread.authorize(credentials)
+    except Exception as e:
+        st.error(f"Failed to initialize Google Sheets: {str(e)}")
+        return None
+
 def ensure_worksheet_exists():
     try:
         client = init_google_sheets()
@@ -22,7 +97,7 @@ def ensure_worksheet_exists():
         try:
             worksheet = spreadsheet.worksheet("Transactions")
         except gspread.WorksheetNotFound:
-            worksheet = spreadsheet.add_worksheet(title="Transactions", rows="1000", cols="6")
+            worksheet = spreadsheet.add_worksheet(title="Transactions", rows="1000", cols="6")  # Added one more column for spending_type
             headers = ["date", "description", "amount", "category", "type", "transaction_type"]
             worksheet.append_row(headers)
         return True
@@ -30,7 +105,7 @@ def ensure_worksheet_exists():
         st.error(f"Error ensuring worksheet exists: {str(e)}")
         return False
 
-def add_transaction(date, description, amount, category, type_, transaction_type):
+def add_transaction(date, description, amount, category, type_, spending_type):
     try:
         if not ensure_worksheet_exists():
             return False
@@ -51,7 +126,7 @@ def add_transaction(date, description, amount, category, type_, transaction_type
                 return False
         
         # If no duplicate found, add the transaction
-        row = [date, description, amount, category, type_, transaction_type]
+        row = [date, description, amount, category, type_, spending_type]
         sheet.append_row(row)
         return True
     except Exception as e:
@@ -77,6 +152,9 @@ with st.sidebar:
     if 'transaction_type' not in st.session_state:
         st.session_state.transaction_type = "Need"
         
+    # Updated transaction form
+    st.subheader("Add Transaction")
+    
     # Transaction type selector outside the form
     transaction_type = st.selectbox(
         "Transaction Type",
@@ -111,29 +189,87 @@ with st.sidebar:
             elif len(description.strip()) < 3:
                 st.error("Please provide a more detailed description")
             else:
-                type_ = "income" if transaction_type == "Income" else "expense"
+                transaction_type = "income" if transaction_type == "Income" else "expense"
                 if add_transaction(
                     date.strftime('%Y-%m-%d'),
                     description.strip(),
                     amount,
                     category,
-                    type_,
-                    transaction_type
+                    transaction_type,
+                    st.session_state.transaction_type
                 ):
                     st.success("Transaction added successfully!")
                     st.experimental_rerun()
+            # Display budget allocations first
+    # Add custom CSS for budget cards
+    st.markdown("""
+        <style>
+            .budget-card {
+                background-color: white;
+                border-radius: 10px;
+                padding: 1rem;
+                margin-bottom: 1rem;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            .budget-title {
+                color: #4B5563;
+                font-size: 0.875rem;
+                margin-bottom: 0.5rem;
+            }
+            .budget-amount {
+                color: #111827;
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+            }
+            .budget-subtitle {
+                color: #6B7280;
+                font-size: 0.75rem;
+                margin-bottom: 0.5rem;
+            }
+            .progress-container {
+                background-color: #E5E7EB;
+                border-radius: 9999px;
+                height: 8px;
+                margin-top: 0.5rem;
+            }
+            .progress-needs {
+                background-color: #3B82F6;
+                height: 100%;
+                border-radius: 9999px;
+                transition: width 0.5s ease;
+            }
+            .progress-wants {
+                background-color: #10B981;
+                height: 100%;
+                border-radius: 9999px;
+                transition: width 0.5s ease;
+            }
+            .progress-savings {
+                background-color: #6366F1;
+                height: 100%;
+                border-radius: 9999px;
+                transition: width 0.5s ease;
+            }
+            .percent-text {
+                color: #6B7280;
+                font-size: 0.75rem;
+                text-align: right;
+                margin-top: 0.25rem;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Display budget allocations
     if 'df' not in locals():
         df = load_transactions()
     
-    if not df.empty and 'transaction_type' in df.columns:
+    if not df.empty and 'spending_type' in df.columns:
         total_income = df[df['type'] == 'income']['amount'].sum()
         
         # Calculate budgets and spending
-        needs_spent = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Need')]['amount'].sum())
-        wants_spent = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Want')]['amount'].sum())
-        savings_spent = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Savings')]['amount'].sum())
+        needs_spent = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Need')]['amount'].sum())
+        wants_spent = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Want')]['amount'].sum())
+        savings_spent = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Savings')]['amount'].sum())
         
         needs_budget = total_income * 0.5
         wants_budget = total_income * 0.3
@@ -146,7 +282,7 @@ with st.sidebar:
         
         st.header("Budget Overview")
         
-        # Budget cards with updated transaction_type checks
+        # Needs Card
         st.markdown(f"""
             <div class="budget-card">
                 <div class="budget-title">NEEDS (50%)</div>
@@ -159,6 +295,7 @@ with st.sidebar:
             </div>
         """, unsafe_allow_html=True)
         
+        # Wants Card
         st.markdown(f"""
             <div class="budget-card">
                 <div class="budget-title">WANTS (30%)</div>
@@ -171,6 +308,7 @@ with st.sidebar:
             </div>
         """, unsafe_allow_html=True)
         
+        # Savings Card
         st.markdown(f"""
             <div class="budget-card">
                 <div class="budget-title">SAVINGS (20%)</div>
@@ -235,30 +373,32 @@ if not df.empty:
                 default=df['category'].unique()
             )
         with col2:
-            type_filter = st.multiselect(
+            transaction_type = st.multiselect(
                 "Filter by Type",
                 options=['income', 'expense'],
                 default=['income', 'expense']
             )
         with col3:
-            if 'transaction_type' in df.columns:
-                transaction_types = st.multiselect(
-                    "Filter by Transaction Type",
-                    options=df['transaction_type'].unique(),
-                    default=df['transaction_type'].unique()
+            # Check if spending_type column exists
+            if 'spending_type' in df.columns:
+                spending_types = st.multiselect(
+                    "Filter by Spending Type",
+                    options=df['spending_type'].unique(),
+                    default=df['spending_type'].unique()
                 )
             else:
-                transaction_types = ['All']
+                spending_types = ['All']
         
         # Filter and display transactions
+        # Create mask based on available columns
         mask = (
             df['category'].isin(selected_categories) & 
-            df['type'].isin(type_filter)
+            df['type'].isin(transaction_type)
         )
         
-        if 'transaction_type' in df.columns and transaction_types != ['All']:
-            mask = mask & df['transaction_type'].isin(transaction_types)
-            
+        # Add spending_type filter only if the column exists
+        if 'spending_type' in df.columns and spending_types != ['All']:
+            mask = mask & df['spending_type'].isin(spending_types)
         filtered_df = df[mask].sort_values('date', ascending=False)
         
         st.dataframe(
@@ -279,11 +419,11 @@ if not df.empty:
             ideal_wants = total_income * 0.3
             ideal_savings = total_income * 0.2
             
-            # Calculate actual spending
-            if 'transaction_type' in df.columns:
-                actual_needs = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Need')]['amount'].sum())
-                actual_wants = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Want')]['amount'].sum())
-                actual_savings = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Savings')]['amount'].sum())
+            # Calculate actual spending with fallback for missing column
+            if 'spending_type' in df.columns:
+                actual_needs = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Need')]['amount'].sum())
+                actual_wants = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Want')]['amount'].sum())
+                actual_savings = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Savings')]['amount'].sum())
             else:
                 actual_needs = 0
                 actual_wants = 0
@@ -326,7 +466,7 @@ if not df.empty:
                 st.metric("Savings", f"{(actual_savings/total_income*100):.1f}%", 
                          f"{((actual_savings/total_income*100) - 20):.1f}%")
         
-        # Monthly trend chart
+        # Existing monthly trend chart
         monthly_data = df.copy()
         monthly_data['date'] = pd.to_datetime(monthly_data['date'])
         monthly_data['month'] = monthly_data['date'].dt.strftime('%Y-%m')
