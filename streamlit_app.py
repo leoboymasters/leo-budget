@@ -109,8 +109,23 @@ def add_transaction(date, description, amount, category, type_, spending_type):
     try:
         if not ensure_worksheet_exists():
             return False
+            
         client = init_google_sheets()
         sheet = client.open_by_key(st.secrets["spreadsheet_id"]).worksheet("Transactions")
+        
+        # Get all existing transactions
+        existing_transactions = sheet.get_all_records()
+        
+        # Check for potential duplicate within the last 24 hours
+        for transaction in existing_transactions:
+            if (transaction['date'] == date and 
+                transaction['description'] == description and 
+                float(transaction['amount']) == float(amount) and 
+                transaction['category'] == category):
+                st.error("This appears to be a duplicate transaction. Please verify.")
+                return False
+        
+        # If no duplicate found, add the transaction
         row = [date, description, amount, category, type_, spending_type]
         sheet.append_row(row)
         return True
@@ -168,19 +183,24 @@ with st.sidebar:
         submitted = st.form_submit_button("Add Transaction")
         
         if submitted and description and amount:
-            transaction_type = "income" if transaction_type == "Income" else "expense"
-            if add_transaction(
-                date.strftime('%Y-%m-%d'),
-                description,
-                amount,
-                category,
-                transaction_type,
-                st.session_state.transaction_type  # Use the transaction type from session state
-            ):
-                st.success("Transaction added!")
-                st.experimental_rerun()
-        # Display budget allocations first
-        
+            # Add validation checks
+            if amount <= 0:
+                st.error("Amount must be greater than 0")
+            elif len(description.strip()) < 3:
+                st.error("Please provide a more detailed description")
+            else:
+                transaction_type = "income" if transaction_type == "Income" else "expense"
+                if add_transaction(
+                    date.strftime('%Y-%m-%d'),
+                    description.strip(),
+                    amount,
+                    category,
+                    transaction_type,
+                    st.session_state.transaction_type
+                ):
+                    st.success("Transaction added successfully!")
+                    st.experimental_rerun()
+            # Display budget allocations first
     # Add custom CSS for budget cards
     st.markdown("""
         <style>
