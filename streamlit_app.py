@@ -164,7 +164,7 @@ with st.sidebar:
     
     # Define categories based on transaction type
     categories = {
-        "Need": ["Rent", "Food", "Utilities", "Transportation", "Healthcare", "Education", "Insurance"],
+        "Need": ["Food", "Utilities", "Transportation", "Rent", "Healthcare", "Education", "Insurance"],
         "Want": ["Entertainment", "Shopping", "Dining", "Travel", "Hobbies", "Subscriptions", "Gifts"],
         "Savings": ["Emergency Fund", "Investments", "Retirement", "Goals", "Debt Payment"],
         "Income": ["Salary", "Freelance", "Business", "Investments", "Other Income"]
