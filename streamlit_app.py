@@ -2,10 +2,9 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
 import altair as alt
 import traceback
-import calendar
-from datetime import datetime, timedelta
 
 # Page configuration
 st.set_page_config(
@@ -409,7 +408,6 @@ if not df.empty:
         )
     
     with tab2:
-
         st.subheader("Spending Analysis")
         
         # 50/30/20 Budget Analysis
