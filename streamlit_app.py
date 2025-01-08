@@ -13,8 +13,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-[previous CSS styles remain unchanged...]
-
 def ensure_worksheet_exists():
     try:
         client = init_google_sheets()
