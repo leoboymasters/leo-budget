@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
 import altair as alt
 import traceback
+import calendar
+from datetime import datetime, timedelta
 
 # Page configuration
 st.set_page_config(
@@ -408,6 +409,106 @@ if not df.empty:
         )
     
     with tab2:
+
+        # Add this inside tab2, after the existing charts
+        st.subheader("Daily Expenses Calendar")
+
+        # Get current date and first day of month
+        current_date = datetime.now()
+        first_day = current_date.replace(day=1)
+
+        # Create month selector
+        selected_month = st.date_input("Select Month", first_day, format="YYYY/MM/DD")
+        # We'll only use the year and month from the selected date
+        selected_month = selected_month.replace(day=1)
+
+        # Filter transactions for selected month
+        monthly_mask = (
+            pd.to_datetime(df['date']).dt.year == selected_month.year) & (
+            pd.to_datetime(df['date']).dt.month == selected_month.month
+        )
+        month_transactions = df[monthly_mask].copy()
+
+        # Calculate daily expenses
+        daily_expenses = month_transactions[month_transactions['type'] == 'expense'].groupby('date')['amount'].sum().abs()
+
+        # Create calendar grid
+        _, num_days = calendar.monthrange(selected_month.year, selected_month.month)
+        first_weekday = calendar.weekday(selected_month.year, selected_month.month, 1)
+
+        # Create week rows for calendar
+        weeks = []
+        current_week = [''] * first_weekday
+        for day in range(1, num_days + 1):
+            current_week.append(day)
+            if len(current_week) == 7:
+                weeks.append(current_week)
+                current_week = []
+        if current_week:
+            current_week.extend([''] * (7 - len(current_week)))
+            weeks.append(current_week)
+
+        # Display calendar with custom CSS
+        st.markdown("""
+            <style>
+                .calendar-grid {
+                    display: grid;
+                    grid-template-columns: repeat(7, 1fr);
+                    gap: 4px;
+                    margin-top: 1rem;
+                }
+                .calendar-header {
+                    text-align: center;
+                    padding: 0.5rem;
+                    background-color: #f3f4f6;
+                    font-weight: bold;
+                }
+                .calendar-day {
+                    background-color: white;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 4px;
+                    padding: 0.5rem;
+                    min-height: 80px;
+                }
+                .calendar-date {
+                    font-weight: bold;
+                    margin-bottom: 0.25rem;
+                }
+                .expense-amount {
+                    color: #ef4444;
+                    font-size: 0.875rem;
+                }
+                .empty-day {
+                    background-color: #f3f4f6;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Display weekday headers
+        weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        st.markdown('<div class="calendar-grid">', unsafe_allow_html=True)
+        for day in weekdays:
+            st.markdown(f'<div class="calendar-header">{day}</div>', unsafe_allow_html=True)
+
+        # Display calendar days
+        for week in weeks:
+            for day in week:
+                if day == '':
+                    st.markdown('<div class="calendar-day empty-day"></div>', unsafe_allow_html=True)
+                else:
+                    date_str = selected_month.replace(day=day).strftime('%Y-%m-%d')
+                    expense = daily_expenses.get(date_str, 0)
+                    st.markdown(f"""
+                        <div class="calendar-day">
+                            <div class="calendar-date">{day}</div>
+                            <div class="expense-amount">
+                                {f"₱{expense:,.2f}" if expense > 0 else ""}
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
         st.subheader("Spending Analysis")
         
         # 50/30/20 Budget Analysis
