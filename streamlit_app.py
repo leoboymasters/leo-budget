@@ -267,9 +267,9 @@ with st.sidebar:
         total_income = df[df['type'] == 'income']['amount'].sum()
         
         # Calculate budgets and spending
-        needs_spent = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Need')]['amount'].sum())
-        wants_spent = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Want')]['amount'].sum())
-        savings_spent = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Savings')]['amount'].sum())
+        needs_spent = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Need')]['amount'].sum())
+        wants_spent = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Want')]['amount'].sum())
+        savings_spent = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Savings')]['amount'].sum())
         
         needs_budget = total_income * 0.5
         wants_budget = total_income * 0.3
@@ -397,8 +397,8 @@ if not df.empty:
         )
         
         # Add spending_type filter only if the column exists
-        if 'transaction_type' in df.columns and spending_types != ['All']:
-            mask = mask & df['transaction_type'].isin(transaction_type)
+        if 'spending_type' in df.columns and spending_types != ['All']:
+            mask = mask & df['spending_type'].isin(spending_types)
         filtered_df = df[mask].sort_values('date', ascending=False)
         
         st.dataframe(
@@ -420,10 +420,10 @@ if not df.empty:
             ideal_savings = total_income * 0.2
             
             # Calculate actual spending with fallback for missing column
-            if 'transaction_type' in df.columns:
-                actual_needs = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Need')]['amount'].sum())
-                actual_wants = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Want')]['amount'].sum())
-                actual_savings = abs(df[(df['type'] == 'expense') & (df['transaction_type'] == 'Savings')]['amount'].sum())
+            if 'spending_type' in df.columns:
+                actual_needs = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Need')]['amount'].sum())
+                actual_wants = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Want')]['amount'].sum())
+                actual_savings = abs(df[(df['type'] == 'expense') & (df['spending_type'] == 'Savings')]['amount'].sum())
             else:
                 actual_needs = 0
                 actual_wants = 0
